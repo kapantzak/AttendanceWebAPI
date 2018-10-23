@@ -8,6 +8,7 @@ using AttendanceWebApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.Configuration;
 using AttendanceWebApi.Helpers;
+using AttendanceWebApi.Models.CustomModels;
 
 namespace AttendanceWebApi.Controllers
 {
@@ -62,19 +63,29 @@ namespace AttendanceWebApi.Controllers
         {
             var enrollments = from e in _context.Enrollments
                               join c in _context.Courses on e.CourseId equals c.Id
+                              join ca in _context.CoursesAssignments on new { e.CourseId, e.AcademicTermId } equals new { ca.CourseId, ca.AcademicTermId }
                               join u in _context.Users on e.StudentId equals u.Id
                               where u.Id == id
-                              select new
+                              select new EnrollmentItem
                               {
-                                  e.Id,
-                                  e.StartDate,
-                                  e.EndDate,
-                                  e.StudentId,
-                                  u.FirstName,
-                                  u.LastName,
+                                  Id = e.Id,
+                                  StartDate = e.StartDate,
+                                  EndDate = e.EndDate,
+                                  StudentId = e.StudentId,
+                                  FirstName = u.FirstName,
+                                  LastName = u.LastName,
                                   CourseId = c.Id,
                                   CourseName = c.Title,
-                                  c.IsActive
+                                  IsActive = c.IsActive,
+                                  LecturesMinNum = ca.LecturesMinNum,
+                                  LecturesTargetNum = ca.LecturesTargetNum,
+                                  LecturesActualNum = _context.LecturesLog.Where(l=>l.CourseAssignmentId == ca.Id).Count(),
+                                  Logs = _context.AttendanceLog
+                                                .Where(a => a.StudentId == id
+                                                    && a.CourseId == c.Id
+                                                    && a.AcademicTermId == e.AcademicTermId
+                                                    && a.AttendanceTypeId == 0)
+                                                .OrderByDescending(x => x.Date).ToList()
                               };
             if (enrollments == null)
             {

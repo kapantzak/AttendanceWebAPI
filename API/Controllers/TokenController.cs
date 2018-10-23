@@ -10,6 +10,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.Extensions.Configuration;
 using AttendanceWebApi.Models;
+using AttendanceWebApi.Helpers;
 
 namespace AttendanceWebApi.Controllers
 {
@@ -31,11 +32,12 @@ namespace AttendanceWebApi.Controllers
         {
             var verifiedUser = this.UserValidated(login);
             if (verifiedUser != default(Users))
-            {
+            {                
                 var obj = new
                 {
                     UserId = verifiedUser.Id,
                     verifiedUser.Username,
+                    UserRoles = AppHelper.GetUserRoles(verifiedUser.Id, _context),
                     Token = GenerateToken(login.Username)
                 };
                 return new ObjectResult(obj);

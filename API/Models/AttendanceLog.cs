@@ -14,10 +14,12 @@ namespace AttendanceWebApi.Models
         public double? Longitude { get; set; }
         public double? Latitude { get; set; }
         public long? Timestamp { get; set; }
+        public int LecturesLogId { get; set; }
 
         public AcademicTerms AcademicTerm { get; set; }
         public AttendanceTypes AttendanceType { get; set; }
         public Courses Course { get; set; }
+        public LecturesLog LecturesLog { get; set; }
         public Users Student { get; set; }
     }
 }

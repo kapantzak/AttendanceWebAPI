@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.SqlClient;
 using System.Linq;
 using System.Threading.Tasks;
 using AttendanceWebApi.Helpers;
 using AttendanceWebApi.Models;
+using AttendanceWebApi.Models.CustomModels;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
@@ -58,6 +60,39 @@ namespace AttendanceWebApi.Controllers
         public IEnumerable<Users> GetStudents()
         {
             return this.GetUsersByRoleId(3);
+        }
+
+        /// <summary>
+        /// Get list of students for specific professor and the current academic term
+        /// </summary>
+        /// <param name="professorId"></param>        
+        /// <returns></returns>
+        [HttpGet("ProfessorsStudents/{professorId}")]
+        public IEnumerable<Users> GetProfessorsStudents(int professorId)
+        {
+            var academicTermId = this.GetCurrentAcademicTermId();
+            if (academicTermId != null)
+            {
+                return this.GetStudentsByProfessorId(professorId, (int)academicTermId);
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Get professor's assigned data (courses and students)
+        /// </summary>
+        /// <param name="professorId"></param>        
+        /// <returns></returns>
+        [HttpGet("ProfessorsAssignedData/{professorId}")]
+        public IActionResult GetProfessorsAssignedData(int professorId)
+        {
+            var academicTermId = this.GetCurrentAcademicTermId();
+            if (academicTermId != null)
+            {
+                var data = this.ProfessorsAssignedData(professorId, (int)academicTermId);
+                return new ObjectResult(data);
+            }
+            return NotFound();
         }
 
         /// <summary>
@@ -157,6 +192,66 @@ namespace AttendanceWebApi.Controllers
                                                                    join r in _context.Roles on ur.RoleId equals r.Id
                                                                    where r.Id == roleId
                                                                    select u;
+
+        /// <summary>
+        /// Get the current academic term id
+        /// </summary>
+        /// <returns></returns>
+        private int? GetCurrentAcademicTermId()
+        {
+            var query = @"select a.ID from AcademicTerms a
+                        where GETDATE() between a.StartDate and a.EndDate";
+            var cmd = new SqlCommand(query);
+            var sdt = AdoHelper.GetDataTable(cmd, _connString);
+            if (!sdt.ErrorFound && sdt.DataTable.Rows.Count > 0)
+            {
+                var termId = sdt.DataTable.Rows[0]["ID"].ToString();
+                int id;
+                if (int.TryParse(termId, out id))
+                {
+                    return id;
+                }
+                return null;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// Get list of students for specific professor and academic term
+        /// </summary>
+        /// <param name="professorId"></param>
+        /// <param name="academicTermId"></param>
+        /// <returns></returns>
+        private IEnumerable<Users> GetStudentsByProfessorId(int professorId, int academicTermId) => (from ca in _context.CoursesAssignments
+                                                                                                     join e in _context.Enrollments on ca.CourseId equals e.CourseId
+                                                                                                     join u in _context.Users on e.StudentId equals u.Id
+                                                                                                     where ca.ProfessorId == professorId && e.AcademicTermId == academicTermId
+                                                                                                     select u).Distinct();
+        
+        /// <summary>
+        /// Get list of assigned courses and enrolled students for specific professor and academic term
+        /// </summary>
+        /// <param name="professorId"></param>
+        /// <param name="academicTermId"></param>
+        /// <returns></returns>
+        private object ProfessorsAssignedData(int professorId, int academicTermId) => new
+        {
+            ProfessorID = professorId,
+            Courses = (from ca in _context.CoursesAssignments
+                       join e in _context.Enrollments on ca.CourseId equals e.CourseId
+                       join c in _context.Courses on e.CourseId equals c.Id
+                       where ca.ProfessorId == professorId && ca.AcademicTermId == academicTermId
+                       group c by c.Id into g
+                       select new
+                       {
+                           Id = g.Key,
+                           _context.Courses.SingleOrDefault(x => x.Id == g.Key).Title,
+                           Students = (from se in _context.Enrollments
+                                       join su in _context.Users on se.StudentId equals su.Id
+                                       where se.CourseId == g.Key && se.AcademicTermId == academicTermId
+                                       select su).ToList()
+                       }).ToList()
+        };
 
     }
 }

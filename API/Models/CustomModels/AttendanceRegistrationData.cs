@@ -22,11 +22,7 @@ namespace AttendanceWebApi.Models.CustomModels
         /// <summary>
         /// User's Latitude
         /// </summary>
-        public double GeoLat { get; set; }
-        /// <summary>
-        /// The timestamp that the user scanned the QR Code 
-        /// </summary>
-        public long Timestamp { get; set; }
+        public double GeoLat { get; set; }        
         /// <summary>
         /// The timestamp that the QR Code was generated
         /// </summary>

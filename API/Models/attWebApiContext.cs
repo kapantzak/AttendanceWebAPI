@@ -14,6 +14,7 @@ namespace AttendanceWebApi.Models
         public virtual DbSet<Courses> Courses { get; set; }
         public virtual DbSet<CoursesAssignments> CoursesAssignments { get; set; }
         public virtual DbSet<Enrollments> Enrollments { get; set; }
+        public virtual DbSet<LecturesLog> LecturesLog { get; set; }
         public virtual DbSet<Roles> Roles { get; set; }
         public virtual DbSet<UserRoles> UserRoles { get; set; }
         public virtual DbSet<Users> Users { get; set; }
@@ -77,6 +78,8 @@ namespace AttendanceWebApi.Models
 
                 entity.Property(e => e.Date).HasColumnType("datetime");
 
+                entity.Property(e => e.LecturesLogId).HasColumnName("LecturesLogID");
+
                 entity.Property(e => e.StudentId).HasColumnName("StudentID");
 
                 entity.HasOne(d => d.AcademicTerm)
@@ -96,6 +99,12 @@ namespace AttendanceWebApi.Models
                     .HasForeignKey(d => d.CourseId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_AttendanceLog_Courses");
+
+                entity.HasOne(d => d.LecturesLog)
+                    .WithMany(p => p.AttendanceLog)
+                    .HasForeignKey(d => d.LecturesLogId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_AttendanceLog_LecturesLog");
 
                 entity.HasOne(d => d.Student)
                     .WithMany(p => p.AttendanceLog)
@@ -226,6 +235,23 @@ namespace AttendanceWebApi.Models
                     .HasForeignKey(d => d.StudentId)
                     .OnDelete(DeleteBehavior.ClientSetNull)
                     .HasConstraintName("FK_Enrollments_Users");
+            });
+
+            modelBuilder.Entity<LecturesLog>(entity =>
+            {
+                entity.Property(e => e.Id)
+                    .HasColumnName("ID")
+                    .ValueGeneratedNever();
+
+                entity.Property(e => e.CourseAssignmentId).HasColumnName("CourseAssignmentID");
+
+                entity.Property(e => e.Date).HasColumnType("datetime");
+
+                entity.HasOne(d => d.CourseAssignment)
+                    .WithMany(p => p.LecturesLog)
+                    .HasForeignKey(d => d.CourseAssignmentId)
+                    .OnDelete(DeleteBehavior.ClientSetNull)
+                    .HasConstraintName("FK_LecturesLog_CoursesAssignments");
             });
 
             modelBuilder.Entity<Roles>(entity =>
